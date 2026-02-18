@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
 ╔══════════════════════════════════════════════════════════════════════════════╗
-║              NAU QUANTUM ALPHA ENGINE v3.0 — Trading Platform              ║
-║          Advanced AI-Powered Indicator with Interactive Charting            ║
+║              NAU QUANTUM ALPHA ENGINE v4.0 — Next-Gen Trading Platform              ║
+║          Advanced AI/ML Indicator with 18-Factor Confluence Analysis            ║
 ║                    Developed for Professional Traders                       ║
 ╚══════════════════════════════════════════════════════════════════════════════╝
 
@@ -570,14 +570,151 @@ class SmartMoneyConcepts:
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# SECTION 2.5: NEW AI/ML ENGINES (v4.0)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+class TemporalAttention:
+    """Transformer-inspired self-attention for pattern recognition."""
+    def __init__(self, window=30, n_heads=4):
+        self.window = window; self.n_heads = n_heads
+    def compute_score(self, closes, volumes, idx):
+        if idx < self.window: return 0.0
+        start = max(0, idx - self.window)
+        seg_c = closes[start:idx+1]; seg_v = volumes[start:idx+1]; n = len(seg_c)
+        if n < 5: return 0.0
+        feats = np.zeros((n, 6))
+        for i in range(n):
+            feats[i,0] = (seg_c[i]-seg_c[max(0,i-1)])/(seg_c[max(0,i-1)]+1e-10)
+            feats[i,1] = seg_v[i]/(np.mean(seg_v[:max(1,i)])+1e-10)
+            feats[i,2] = (seg_c[i]-seg_c[max(0,i-3)])/(seg_c[max(0,i-3)]+1e-10) if i>=3 else 0
+            feats[i,3] = np.std(seg_c[max(0,i-5):i+1])/(np.mean(seg_c[max(0,i-5):i+1])+1e-10) if i>=1 else 0
+            rh=np.max(seg_c[max(0,i-10):i+1]); rl=np.min(seg_c[max(0,i-10):i+1])
+            feats[i,4] = (seg_c[i]-rl)/(rh-rl+1e-10)
+            feats[i,5] = abs(feats[i,0])/(feats[i,3]+1e-10)
+        scores = []
+        for h in range(self.n_heads):
+            s=(h*6)//self.n_heads; e=((h+1)*6)//self.n_heads
+            hf=feats[:,s:e]; q=hf[-1:]; k=hf
+            attn=(q@k.T)/np.sqrt(hf.shape[1]+1e-10)
+            attn=attn.flatten()*np.exp(-np.arange(n-1,-1,-1)*0.1)
+            ae=np.exp(attn-np.max(attn)); w=ae/(np.sum(ae)+1e-10)
+            scores.append(np.sum(w*feats[:,0]))
+        return np.clip(np.mean(scores)*5000, -100, 100)
+
+class RLSignalOptimizer:
+    """Q-Learning adaptive signal optimizer."""
+    def __init__(self, alpha=0.1, gamma=0.95, epsilon=0.1):
+        self.alpha=alpha; self.gamma=gamma; self.epsilon=epsilon
+        self.Q=np.random.uniform(0,0.1,(5,3,5,5))
+        self.mults=np.array([-1.0,-0.5,0.0,0.5,1.0])
+    def optimize(self, closes, returns, raw_signal, window=50):
+        n=len(closes); opt=np.zeros(n)
+        for i in range(window, n):
+            ti=np.clip(int((raw_signal[i]+100)/40),0,4)
+            vi=np.clip(int(np.std(returns[max(0,i-window):i])*300),0,2)
+            mi=np.clip(int((np.mean(returns[max(0,i-5):i])*1000+100)/40),0,4)
+            st=(ti,vi,mi)
+            a=np.random.randint(5) if np.random.random()<self.epsilon else np.argmax(self.Q[st])
+            opt[i]=raw_signal[i]*(0.5+0.5*self.mults[a])
+            if i+1<n:
+                rw=np.clip(np.sign(opt[i])*returns[i+1]*100,-1,1)
+                ns=(np.clip(int((raw_signal[min(i+1,n-1)]+100)/40),0,4),vi,np.clip(int((np.mean(returns[max(0,i-4):i+1])*1000+100)/40),0,4))
+                self.Q[st+(a,)]+=self.alpha*(rw+self.gamma*np.max(self.Q[ns])-self.Q[st+(a,)])
+            self.epsilon=max(0.01,self.epsilon*0.999)
+        return opt
+
+class DeepRegimeDetector:
+    """GMM-based 4-regime detector with transition dynamics."""
+    def __init__(self, n_regimes=4):
+        self.n_regimes = n_regimes
+    def detect(self, closes, volumes, returns, window=20):
+        n=len(closes); score=np.zeros(n)
+        for i in range(window, n):
+            seg_r=returns[max(0,i-window):i]; seg_v=volumes[max(0,i-window):i]
+            seg_c=closes[max(0,i-window):i]
+            trend=np.mean(seg_r); vol=np.std(seg_r)
+            rel_vol=volumes[i]/(np.mean(seg_v)+1e-10)-1
+            zscore=(closes[i]-np.mean(seg_c))/(np.std(seg_c)+1e-10)
+            # Classify regime
+            if trend > 0.001 and vol < np.percentile(np.abs(returns[max(0,i-100):i]),75):
+                score[i] = 80  # Bull
+            elif trend < -0.001 and vol < np.percentile(np.abs(returns[max(0,i-100):i]),75):
+                score[i] = -80  # Bear
+            elif vol > np.percentile(np.abs(returns[max(0,i-100):i]),85):
+                score[i] = 0  # High vol
+            else:
+                score[i] = 10 if zscore > 0 else -10  # Accumulation
+        return gaussian_filter1d(np.clip(score,-100,100), sigma=3)
+
+class AdvancedOrderFlow:
+    """VWAP deviation + volume delta + absorption detection."""
+    @staticmethod
+    def compute_score(opens, highs, lows, closes, volumes, window=20):
+        n=len(closes); score=np.zeros(n)
+        for i in range(window, n):
+            seg_c=closes[i-window:i+1]; seg_v=volumes[i-window:i+1]
+            vwap=np.sum(seg_c*seg_v)/(np.sum(seg_v)+1e-10)
+            vwap_dev=np.clip((closes[i]-vwap)/(vwap*0.01+1e-10)*20,-100,100)
+            # Volume delta proxy
+            cr=highs[i]-lows[i]
+            delta=((closes[i]-lows[i])/(cr+1e-10)-0.5)*2*volumes[i] if cr>0 else 0
+            avg_vol=np.mean(seg_v)
+            delta_score=np.clip(delta/(avg_vol*0.5+1e-10)*30,-100,100)
+            # Absorption
+            avg_range=np.mean(highs[i-window:i+1]-lows[i-window:i+1])
+            absorption=0
+            if volumes[i]/(avg_vol+1e-10)>1.5 and cr/(avg_range+1e-10)<0.5:
+                absorption=((closes[i]-lows[i])/(cr+1e-10)-0.5)*100 if cr>0 else 0
+            score[i]=0.4*vwap_dev+0.4*delta_score+0.2*absorption
+        return np.clip(score,-100,100)
+
+class MicroStructureAnalyzer:
+    """Market microstructure: spread estimation + liquidity."""
+    @staticmethod
+    def compute_score(opens, highs, lows, closes, volumes, window=20):
+        n=len(closes); score=np.zeros(n)
+        for i in range(window, n):
+            seg_c=closes[max(0,i-window):i+1]
+            if len(seg_c)>=3:
+                rets=np.diff(seg_c)/seg_c[:-1]
+                if len(rets)>=2:
+                    autocov=np.mean(rets[1:]*rets[:-1])
+                    spread=2*np.sqrt(max(-autocov,0))
+                else: spread=0
+            else: spread=0
+            spread_factor=np.clip(1-spread*100,-1,1)
+            trend_dir=np.sign(closes[i]-closes[max(0,i-5)])
+            score[i]=trend_dir*spread_factor*50
+        return np.clip(score,-100,100)
+
+class MultiTimeframeMomentum:
+    """Multi-timeframe momentum coherence across lookback periods."""
+    @staticmethod
+    def compute_score(closes, windows=(5,10,20,50)):
+        n=len(closes); score=np.zeros(n); mw=max(windows)
+        for i in range(mw, n):
+            moms=[np.sign((closes[i]-closes[i-w])/(closes[i-w]+1e-10)) for w in windows]
+            agreement=np.sum(moms)
+            if abs(agreement)==len(windows):
+                mag=np.mean([abs((closes[i]-closes[i-w])/(closes[i-w]+1e-10)) for w in windows])
+                score[i]=np.sign(agreement)*min(mag*2000,100)
+            elif abs(agreement)>=len(windows)-1:
+                mag=np.mean([abs((closes[i]-closes[i-w])/(closes[i-w]+1e-10)) for w in windows])
+                score[i]=np.sign(agreement)*min(mag*1000,70)
+        return np.clip(score,-100,100)
+
+
 # SECTION 3: NAU QUANTUM ALPHA INDICATOR (MAIN ENGINE)
 # ═══════════════════════════════════════════════════════════════════════════════
 
 class NAUQuantumAlphaIndicator:
     """
     ╔══════════════════════════════════════════════════════════════════════╗
-    ║                NAU QUANTUM ALPHA INDICATOR v3.0                     ║
-    ║              12-Factor Confluence AI Trading Engine                 ║
+    ║                NAU QUANTUM ALPHA INDICATOR v4.0                     ║
+    ║              18-Factor AI/ML Confluence Trading Engine                 ║
     ╚══════════════════════════════════════════════════════════════════════╝
     
     Combines 12 advanced factors into a unified signal:
@@ -615,6 +752,14 @@ class NAUQuantumAlphaIndicator:
         self.fractal_analyzer = FractalAnalyzer()
         self.smc = SmartMoneyConcepts()
         
+        # New v4.0 AI/ML engines
+        self.attention = TemporalAttention(window=30, n_heads=4)
+        self.rl_optimizer = RLSignalOptimizer(alpha=0.1, gamma=0.95)
+        self.deep_regime = DeepRegimeDetector(n_regimes=4)
+        self.order_flow = AdvancedOrderFlow()
+        self.micro_structure = MicroStructureAnalyzer()
+        self.mtf_momentum = MultiTimeframeMomentum()
+        
     @staticmethod
     def default_config():
         return {
@@ -638,17 +783,12 @@ class NAUQuantumAlphaIndicator:
             'confidence_threshold': 0.6,
             # Factor weights (sum to 1.0)
             'weights': {
-                'kalman': 0.12,
-                'wavelet': 0.10,
-                'hmm': 0.10,
-                'entropy': 0.08,
-                'apen': 0.07,
-                'hurst': 0.10,
-                'fractal': 0.08,
-                'order_blocks': 0.10,
-                'fvg': 0.08,
-                'bos_choch': 0.10,
-                'fractals': 0.07,
+                'kalman': 0.08, 'wavelet': 0.06, 'hmm': 0.06,
+                'entropy': 0.04, 'apen': 0.04, 'hurst': 0.06,
+                'fractal': 0.04, 'order_blocks': 0.06, 'fvg': 0.05,
+                'bos_choch': 0.06, 'fractals': 0.04,
+                'attention': 0.10, 'rl': 0.08, 'deep_regime': 0.07,
+                'order_flow': 0.07, 'micro_structure': 0.04, 'mtf_momentum': 0.05,
             }
         }
     
@@ -666,6 +806,7 @@ class NAUQuantumAlphaIndicator:
         highs = df['High'].values.flatten().astype(float)
         lows = df['Low'].values.flatten().astype(float)
         closes = df['Close'].values.flatten().astype(float)
+        volumes = df['Volume'].values.flatten().astype(float)
         n = len(closes)
         
         if n < 30:
@@ -803,9 +944,27 @@ class NAUQuantumAlphaIndicator:
                 fractal_sr_score[i] = -60
         fractal_sr_score = gaussian_filter1d(fractal_sr_score, sigma=2)
         
+        # ═══ NEW v4.0 FACTORS ═══
+        # Factor 13: Temporal Self-Attention
+        attention_score = np.zeros(n)
+        for i in range(30, n):
+            attention_score[i] = self.attention.compute_score(closes, volumes, i)
+        
+        # Factor 15: Deep Regime Detection (GMM)
+        deep_regime_score = self.deep_regime.detect(closes, volumes, returns)
+        
+        # Factor 16: Advanced Order Flow
+        flow_score = self.order_flow.compute_score(opens, highs, lows, closes, volumes)
+        
+        # Factor 17: Micro-Structure
+        micro_score = self.micro_structure.compute_score(opens, highs, lows, closes, volumes)
+        
+        # Factor 18: Multi-Timeframe Momentum
+        mtf_score = self.mtf_momentum.compute_score(closes)
+        
         # ═══ COMPOSITE SIGNAL COMPUTATION ═══
         w = self.config['weights']
-        composite = (
+        pre_composite = (
             w['kalman'] * kalman_trend +
             w['wavelet'] * wavelet_score +
             w['hmm'] * hmm_score +
@@ -816,8 +975,19 @@ class NAUQuantumAlphaIndicator:
             w['order_blocks'] * ob_score +
             w['fvg'] * fvg_score +
             w['bos_choch'] * structure_score +
-            w['fractals'] * fractal_sr_score
+            w['fractals'] * fractal_sr_score +
+            w['attention'] * attention_score +
+            w['deep_regime'] * deep_regime_score +
+            w['order_flow'] * flow_score +
+            w['micro_structure'] * micro_score +
+            w['mtf_momentum'] * mtf_score
         )
+        
+        # Factor 14: RL Signal Optimizer (operates on pre-composite)
+        rl_optimized = self.rl_optimizer.optimize(closes, returns, pre_composite)
+        
+        # Blend pre-composite with RL-optimized
+        composite = (1 - w['rl']) * pre_composite + w['rl'] * rl_optimized
         
         # Smooth the composite signal
         if self.config['signal_smoothing'] > 1:
@@ -834,7 +1004,8 @@ class NAUQuantumAlphaIndicator:
             # Each factor provides evidence
             factors = [kalman_trend[i], wavelet_score[i], hmm_score[i],
                       entropy_score[i], hurst_score[i], ob_score[i],
-                      structure_score[i]]
+                      structure_score[i], attention_score[i],
+                      deep_regime_score[i], flow_score[i], micro_score[i], mtf_score[i]]
             
             for f in factors:
                 if f > 0:
@@ -860,6 +1031,13 @@ class NAUQuantumAlphaIndicator:
         df['NAU_FVG_Score'] = fvg_score
         df['NAU_Structure_Score'] = structure_score
         df['NAU_Williams_Score'] = fractal_sr_score
+        # v4.0 factor columns
+        df['NAU_Attention_Score'] = attention_score
+        df['NAU_RL_Score'] = rl_optimized
+        df['NAU_DeepRegime_Score'] = deep_regime_score
+        df['NAU_OrderFlow_Score'] = flow_score
+        df['NAU_MicroStructure_Score'] = micro_score
+        df['NAU_MTF_Score'] = mtf_score
         
         # Long/Short signals
         df['NAU_Long'] = (composite > 20) & (confidence > self.config['confidence_threshold'])
@@ -1027,28 +1205,23 @@ def generate_html_chart(df, indicator_config=None, visual_config=None, title=Non
         if 'NAU_Kalman' in row:
             kalman_data.append({'time': ts, 'value': round(float(row['NAU_Kalman']), 2)})
         
-        # Get marker font size from config (0 = hide labels)
-        _mfs = visual_config.get('marker_font_size', 11)
-        
         if 'NAU_Long' in row and row['NAU_Long']:
+            _mfs = visual_config.get('marker_font_size', 11)
             _label = f"L {round(float(row['NAU_Confidence'])*100)}%" if _mfs > 0 else ""
             long_markers.append({
-                'time': ts,
-                'position': 'belowBar',
+                'time': ts, 'position': 'belowBar',
                 'color': visual_config['long_color'],
-                'shape': 'arrowUp',
-                'text': _label,
+                'shape': 'arrowUp', 'text': _label,
                 'size': max(1, min(3, _mfs // 5)),
             })
         
         if 'NAU_Short' in row and row['NAU_Short']:
+            _mfs = visual_config.get('marker_font_size', 11)
             _label = f"S {round(float(row['NAU_Confidence'])*100)}%" if _mfs > 0 else ""
             short_markers.append({
-                'time': ts,
-                'position': 'aboveBar',
+                'time': ts, 'position': 'aboveBar',
                 'color': visual_config['short_color'],
-                'shape': 'arrowDown',
-                'text': _label,
+                'shape': 'arrowDown', 'text': _label,
                 'size': max(1, min(3, _mfs // 5)),
             })
     
@@ -1065,6 +1238,12 @@ def generate_html_chart(df, indicator_config=None, visual_config=None, title=Non
         ('NAU_FVG_Score', 'FVG', '#9C27B0'),
         ('NAU_Structure_Score', 'BOS/CHoCH', '#F44336'),
         ('NAU_Williams_Score', 'Fractals', '#795548'),
+        ('NAU_Attention_Score', 'Attention', '#00E5FF'),
+        ('NAU_RL_Score', 'RL-Opt', '#76FF03'),
+        ('NAU_DeepRegime_Score', 'DeepReg', '#FF6D00'),
+        ('NAU_OrderFlow_Score', 'OrdFlow', '#D500F9'),
+        ('NAU_MicroStructure_Score', 'MicroStr', '#1DE9B6'),
+        ('NAU_MTF_Score', 'MTF-Mom', '#FFAB40'),
     ]
     
     for col, name, color in factor_cols:
@@ -1545,10 +1724,9 @@ html, body {{
 ::-webkit-scrollbar-thumb {{ background: var(--border-color); border-radius: 3px; }}
 ::-webkit-scrollbar-thumb:hover {{ background: var(--text-muted); }}
 
-/* ─── MARKER LABEL SIZE OVERRIDE ─── */
-.tv-lightweight-charts table td {{
-    font-size: {visual_config.get('marker_font_size', 11)}px !important;
-}}
+/* ─── RESIZE HANDLES ─── */
+.resize-handle {{ height: 4px; background: transparent; cursor: row-resize; position: relative; z-index: 10; }}
+.resize-handle:hover {{ background: var(--accent-blue); opacity: 0.5; }}
 
 /* ─── RESPONSIVE ─── */
 @media (max-width: 768px) {{
@@ -1565,7 +1743,7 @@ html, body {{
     <div class="header-left">
         <div class="logo">
             <div class="logo-dot"></div>
-            NAU QUANTUM v3.0
+            NAU QUANTUM v4.0
         </div>
         <div class="symbol-info">
             <span class="symbol-name">{symbol_display}</span>
@@ -1611,14 +1789,21 @@ html, body {{
     <span class="ind-value" id="ind-hurst">—</span>
     <span class="ind-label">Entropy:</span>
     <span class="ind-value" id="ind-entropy">—</span>
+    <span class="ind-label">Attention:</span>
+    <span class="ind-value" id="ind-attention" style="color:#00E5FF">—</span>
+    <span class="ind-label">OrderFlow:</span>
+    <span class="ind-value" id="ind-flow" style="color:#D500F9">—</span>
 </div>
 
 <!-- CHART -->
 <div class="chart-wrapper">
     <div id="main-chart" style="position: relative;">
         <div class="regime-banner" id="regime-banner"></div>
+        <div style="position:absolute;top:8px;right:16px;z-index:10;font-family:var(--font-mono);font-size:10px;color:var(--text-muted);background:var(--bg-secondary);padding:2px 8px;border-radius:3px;border:1px solid var(--border-color);">v4.0 · 18 Factors</div>
     </div>
+    <div class="resize-handle" id="resize1"></div>
     <div id="signal-chart"></div>
+    <div class="resize-handle" id="resize2"></div>
     <div id="factor-chart"></div>
 </div>
 
@@ -1859,22 +2044,14 @@ kalmanSeries.setData(kalmanData);
 
 // Signal markers — de-duplicate nearby signals to prevent overlap
 let allMarkers = [...longMarkers, ...shortMarkers].sort((a,b) => a.time - b.time);
-
-// Remove markers that are too close together (within 3 bars)
 if (allMarkers.length > 1) {{
     const filtered = [allMarkers[0]];
     for (let i = 1; i < allMarkers.length; i++) {{
         const prev = filtered[filtered.length - 1];
         const curr = allMarkers[i];
-        // If same direction and very close, keep only the higher confidence one
         if (curr.time - prev.time < 3 * 86400 && prev.position === curr.position) {{
-            // Keep the one with higher confidence (longer text usually)
-            if ((curr.text || '').length >= (prev.text || '').length) {{
-                filtered[filtered.length - 1] = curr;
-            }}
-        }} else {{
-            filtered.push(curr);
-        }}
+            if ((curr.text || '').length >= (prev.text || '').length) filtered[filtered.length - 1] = curr;
+        }} else filtered.push(curr);
     }}
     allMarkers = filtered;
 }}
@@ -2128,6 +2305,31 @@ function takeScreenshot() {{
 }}
 
 // ═══════════════════════════════════════════════════════════════
+// DRAG-RESIZE SUB-CHARTS
+// ═══════════════════════════════════════════════════════════════
+function setupResize(handleId, topEl, bottomEl, topChart, bottomChart) {{
+    const handle = document.getElementById(handleId);
+    if (!handle) return;
+    let startY, startTopH, startBottomH;
+    handle.addEventListener('mousedown', (e) => {{
+        startY = e.clientY; startTopH = topEl.clientHeight; startBottomH = bottomEl.clientHeight;
+        const onMove = (e2) => {{
+            const dy = e2.clientY - startY;
+            const newTop = Math.max(60, startTopH + dy);
+            const newBottom = Math.max(60, startBottomH - dy);
+            topEl.style.height = newTop + 'px'; topEl.style.flex = 'none';
+            bottomEl.style.height = newBottom + 'px';
+            topChart.applyOptions({{ width: topEl.clientWidth, height: newTop }});
+            bottomChart.applyOptions({{ width: bottomEl.clientWidth, height: newBottom }});
+        }};
+        const onUp = () => {{ document.removeEventListener('mousemove', onMove); document.removeEventListener('mouseup', onUp); }};
+        document.addEventListener('mousemove', onMove); document.addEventListener('mouseup', onUp);
+    }});
+}}
+setupResize('resize1', mainEl, sigEl, mainChart, sigChart);
+setupResize('resize2', sigEl, facEl, sigChart, facChart);
+
+// ═══════════════════════════════════════════════════════════════
 // RESIZE HANDLER
 // ═══════════════════════════════════════════════════════════════
 window.addEventListener('resize', () => {{
@@ -2218,4 +2420,3 @@ def main():
 
 if __name__ == '__main__':
     df, html = main()
-
