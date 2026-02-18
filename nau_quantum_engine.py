@@ -1027,22 +1027,29 @@ def generate_html_chart(df, indicator_config=None, visual_config=None, title=Non
         if 'NAU_Kalman' in row:
             kalman_data.append({'time': ts, 'value': round(float(row['NAU_Kalman']), 2)})
         
+        # Get marker font size from config (0 = hide labels)
+        _mfs = visual_config.get('marker_font_size', 11)
+        
         if 'NAU_Long' in row and row['NAU_Long']:
+            _label = f"L {round(float(row['NAU_Confidence'])*100)}%" if _mfs > 0 else ""
             long_markers.append({
                 'time': ts,
                 'position': 'belowBar',
                 'color': visual_config['long_color'],
                 'shape': 'arrowUp',
-                'text': f"L {round(float(row['NAU_Confidence'])*100)}%"
+                'text': _label,
+                'size': max(1, min(3, _mfs // 5)),
             })
         
         if 'NAU_Short' in row and row['NAU_Short']:
+            _label = f"S {round(float(row['NAU_Confidence'])*100)}%" if _mfs > 0 else ""
             short_markers.append({
                 'time': ts,
                 'position': 'aboveBar',
                 'color': visual_config['short_color'],
                 'shape': 'arrowDown',
-                'text': f"S {round(float(row['NAU_Confidence'])*100)}%"
+                'text': _label,
+                'size': max(1, min(3, _mfs // 5)),
             })
     
     # Factor data for the sub-panel
@@ -1538,6 +1545,11 @@ html, body {{
 ::-webkit-scrollbar-thumb {{ background: var(--border-color); border-radius: 3px; }}
 ::-webkit-scrollbar-thumb:hover {{ background: var(--text-muted); }}
 
+/* ─── MARKER LABEL SIZE OVERRIDE ─── */
+.tv-lightweight-charts table td {{
+    font-size: {visual_config.get('marker_font_size', 11)}px !important;
+}}
+
 /* ─── RESPONSIVE ─── */
 @media (max-width: 768px) {{
     .side-panel, .settings-panel {{ width: 100%; }}
@@ -1845,8 +1857,27 @@ const kalmanSeries = mainChart.addLineSeries({{
 }});
 kalmanSeries.setData(kalmanData);
 
-// Signal markers
-const allMarkers = [...longMarkers, ...shortMarkers].sort((a,b) => a.time - b.time);
+// Signal markers — de-duplicate nearby signals to prevent overlap
+let allMarkers = [...longMarkers, ...shortMarkers].sort((a,b) => a.time - b.time);
+
+// Remove markers that are too close together (within 3 bars)
+if (allMarkers.length > 1) {{
+    const filtered = [allMarkers[0]];
+    for (let i = 1; i < allMarkers.length; i++) {{
+        const prev = filtered[filtered.length - 1];
+        const curr = allMarkers[i];
+        // If same direction and very close, keep only the higher confidence one
+        if (curr.time - prev.time < 3 * 86400 && prev.position === curr.position) {{
+            // Keep the one with higher confidence (longer text usually)
+            if ((curr.text || '').length >= (prev.text || '').length) {{
+                filtered[filtered.length - 1] = curr;
+            }}
+        }} else {{
+            filtered.push(curr);
+        }}
+    }}
+    allMarkers = filtered;
+}}
 candleSeries.setMarkers(allMarkers);
 
 // ═══════════════════════════════════════════════════════════════
@@ -2187,3 +2218,4 @@ def main():
 
 if __name__ == '__main__':
     df, html = main()
+
